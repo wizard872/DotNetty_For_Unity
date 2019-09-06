@@ -165,7 +165,7 @@ public class NetworkManager : MonoBehaviour
                 try
                 {
 					//바인딩된 udpChannel를 결과로 받아옴.
-                    udpChannel = task.Result;
+                    udpChannel = bindingTask.Result;
 
                     //지정된 포트가 존재한다면 해당 포트로 연결 시도! 지정되있지 않다면 ConnectGameServer 에서 지정된 주소로 연결함.
                     if (setPort != -1)
@@ -247,7 +247,7 @@ public class NetworkManager : MonoBehaviour
 			//DatagramPacket 생성자 =>>  new DatagramPacket(보낼 데이터(IByteBuffer), 보낸곳의 로컬 주소정보(udpChannel.LocalAddress), 보낼 목적지 주소정보(udpChannel.RemoteAddress));
             DatagramPacket udp_data = new DatagramPacket(data, udpChannel.LocalAddress, udpChannel.RemoteAddress);
 
-			//tcpChannel 를 통해 해당 Datagram 데이터를 송신!
+			//udpChannel 를 통해 해당 Datagram 데이터를 송신!
             udpChannel.WriteAndFlushAsync(udp_data);
         }
         catch (Exception e)
