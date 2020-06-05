@@ -27,6 +27,8 @@ namespace DotNetty.Transport.Channels.Sockets
         readonly DefaultDatagramChannelConfig config;
         readonly IPEndPoint anyRemoteEndPoint;
 
+        private bool isConnected;
+
         public SocketDatagramChannel()
             : this(new Socket(SocketType.Dgram, ProtocolType.Udp))
         {
@@ -40,6 +42,7 @@ namespace DotNetty.Transport.Channels.Sockets
         public SocketDatagramChannel(Socket socket)
             : base(null, socket)
         {
+            isConnected = false;
             this.config = new DefaultDatagramChannelConfig(this, socket);
             this.anyRemoteEndPoint = new IPEndPoint(
                 socket.AddressFamily == AddressFamily.InterNetwork ? IPAddress.Any : IPAddress.IPv6Any,
@@ -81,12 +84,14 @@ namespace DotNetty.Transport.Channels.Sockets
                 this.Socket.Connect(remoteAddress);
                 success = true;
                 
+                this.isConnected = true;
                 return true;
             }
             finally
             {
                 if (!success)
                 {
+                    this.isConnected = false;
                     this.DoClose();
                 }
             }
@@ -103,6 +108,7 @@ namespace DotNetty.Transport.Channels.Sockets
         {
             if (this.TryResetState(StateFlags.Open | StateFlags.Active))
             {
+                this.isConnected = false;
                 this.Socket.Dispose();
             }
         }
@@ -126,7 +132,7 @@ namespace DotNetty.Transport.Channels.Sockets
 #if NETSTANDARD1_3
             pending = this.Socket.ReceiveFromAsync(operation);
 #else
-                if (this.Socket.Connected) //#if UNITY_IOS || UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+                if (this.isConnected)
                 {
                     if (ExecutionContext.IsFlowSuppressed())
                     {
@@ -276,7 +282,7 @@ namespace DotNetty.Transport.Channels.Sockets
             
             int writtenBytes = 0;
             
-            if (this.Socket.Connected)
+            if (this.isConnected)
             {
                 writtenBytes = this.Socket.Send(bytes.Array, bytes.Offset, bytes.Count, SocketFlags.None);
             }
@@ -284,12 +290,6 @@ namespace DotNetty.Transport.Channels.Sockets
             {
                 writtenBytes = this.Socket.SendTo(bytes.Array, bytes.Offset, bytes.Count, SocketFlags.None, remoteAddress);
             }
-            
-/*#if UNITY_IOS || UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX || UNITY_EDITOR
-            writtenBytes = this.Socket.Send(bytes.Array, bytes.Offset, bytes.Count, SocketFlags.None);
-#else
-            writtenBytes = this.Socket.SendTo(bytes.Array, bytes.Offset, bytes.Count, SocketFlags.None, remoteAddress);
-#endif*/
             return writtenBytes > 0;
         }
 
